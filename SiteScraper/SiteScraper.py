@@ -2,7 +2,7 @@
 from lxml import html
 import requests
 
-url = 'http://www1.flightrising.com/forums/cc/2306886'
+url = 'http://www1.flightrising.com/forums/cc/2554259'
 
 # Retrieves HTML from a given URL and stores it in an organized tree
 page = requests.get(url)
@@ -12,30 +12,54 @@ tree = html.fromstring(page.content)
 # Looks for the div where the navigable page numbers are held and finds the last one
 pageNumPath = '//div[@class=\'common-pagination-numbers\']/a[last()]/text()'
 # Path for the posts
-postPath = '//div[@class=\'post-text-content\']/text()'
+postPath = '//div[@class=\'post \']'
+# Get the string value of the post's ID to get its direct link
+IDPath = 'string(./@id)'
+# Path to the content of the post
+contentPath = './/div[@class=\'post-text-content\']/text()'
 
 # Find the element according to the path
 endPageNums = tree.xpath(pageNumPath)
 
 # Set the number of pages to look through
-numOfPages = 0
+numOfPages = 1
 if len(endPageNums) != 0:
 	numOfPages = endPageNums[0]
 
-
-f = open('text.txt', 'w+')
+# Open file for writing
+f = open('submissions.tsv', 'w+')
 
 # Check through every page in the thread, including the last one, since it is not 0 indexed
-for page in range(1, int(numOfPages)+1):
+for page in range(1, numOfPages+1):
+	print("Now scanning page " + str(page) + "/" + str(numOfPages))
 	# Accessing the new page by adding its number at the end of the thread's url
 	page = requests.get(url + '/' + str(page))
 	tree = html.fromstring(page.content)
 
 	# Get all post content
-	postsContent = tree.xpath(postPath)
-	
-	message = '\n\n'.join(postsContent)
+	posts = tree.xpath(postPath)
+	# Remove the first two non-submission posts
+	posts = posts[3:]
 
-	f.write(message.encode('utf-8') + '\n\n')
+	# This is where each submission is stored
+	submissions = []
+
+	for post in posts:
+		submission = []
+		# Skip the white spaces and only grab what we need while also trimming LEFT whitespace
+		for i in range(1,10,2):
+			submission.append(post.xpath(contentPath)[i].lstrip())
+
+		# Add the link to the post
+		submission.append(url + '#' + post.xpath(IDPath))
+
+		info = '\t'.join(submission)
+		submissions.append(info)
+	
+	# Combine all submissions into a string
+	submissionInfo = '\n'.join(submissions)
+	
+	# Store submissions into the file
+	f.write(submissionInfo.encode('utf-8'))
 	
 f.close()
