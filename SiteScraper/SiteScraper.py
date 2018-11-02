@@ -2,6 +2,7 @@
 from lxml import html
 import requests
 
+# URL to search for submission posts
 url = 'http://www1.flightrising.com/forums/cc/2554259'
 
 # Retrieves HTML from a given URL and stores it in an organized tree
@@ -15,7 +16,7 @@ pageNumPath = '//div[@class=\'common-pagination-numbers\']/a[last()]/text()'
 postPath = '//div[@class=\'post \']'
 # Get the string value of the post's ID to get its direct link
 IDPath = 'string(./@id)'
-# Path to the content of the post
+# Path to the content of the post, loking only at plain text
 contentPath = './/div[@class=\'post-text-content\']/text()'
 
 # Find the element according to the path
@@ -36,14 +37,17 @@ for page in range(1, numOfPages+1):
 	page = requests.get(url + '/' + str(page))
 	tree = html.fromstring(page.content)
 
-	# Get all post content
+	# Get all posts
 	posts = tree.xpath(postPath)
-	# Remove the first two non-submission posts
-	posts = posts[3:]
+
+	# Remove the first two non-submission posts, if on the first page
+	if page == 1
+		posts = posts[3:]
 
 	# This is where each submission is stored
 	submissions = []
 
+	# Loop through all submission posts
 	for post in posts:
 		submission = []
 		# Skip the white spaces and only grab what we need while also trimming LEFT whitespace
@@ -53,6 +57,7 @@ for page in range(1, numOfPages+1):
 		# Add the link to the post
 		submission.append(url + '#' + post.xpath(IDPath))
 
+		# Combine submission list into a string and add it to all submissions
 		info = '\t'.join(submission)
 		submissions.append(info)
 	
