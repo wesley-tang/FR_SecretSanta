@@ -34,14 +34,14 @@ f = open('submissions.tsv', 'w+')
 for page in range(1, numOfPages+1):
 	print("Now scanning page " + str(page) + "/" + str(numOfPages))
 	# Accessing the new page by adding its number at the end of the thread's url
-	page = requests.get(url + '/' + str(page))
-	tree = html.fromstring(page.content)
+	pageHTML = requests.get(url + '/' + str(page))
+	tree = html.fromstring(pageHTML.content)
 
 	# Get all posts
 	posts = tree.xpath(postPath)
 
-	# Remove the first two non-submission posts, if on the first page
-	if page == 1
+	# Remove the first three non-submission posts, if on the first page
+	if page == 1:
 		posts = posts[3:]
 
 	# This is where each submission is stored
@@ -53,6 +53,7 @@ for page in range(1, numOfPages+1):
 		# Skip the white spaces and only grab what we need while also trimming LEFT whitespace
 		for i in range(1,10,2):
 			submission.append(post.xpath(contentPath)[i].lstrip())
+		# TODO Add error trap???
 
 		# Add the link to the post
 		submission.append(url + '#' + post.xpath(IDPath))
