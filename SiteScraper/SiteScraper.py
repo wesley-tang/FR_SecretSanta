@@ -56,7 +56,7 @@ for page in range(1, numOfPages+1):
 		# TODO Add error trap???
 
 		# Add the link to the post
-		submission.append(url + '#' + post.xpath(IDPath))
+		submission.append(url + '/' + str(page) + '#' + post.xpath(IDPath))
 
 		# Combine submission list into a string and add it to all submissions
 		info = '\t'.join(submission)
