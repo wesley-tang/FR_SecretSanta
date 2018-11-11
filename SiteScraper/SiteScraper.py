@@ -2,22 +2,26 @@
 from lxml import html
 import requests
 
+# Note: sub[0]: name, sub[1]: id#, sub[2]: want to draw,
+# sub[3]: want to receive, sub[4]: backup santa or not, sub[5]: post link
+
 # Takes a list of submissions and returns a string directory from it
 def genDirectoryText(submissions):
 	text = ""
+	# Loop through all submissions in the list and generate the directory
 	for sub in submissions:
 		text += ("[url=" + sub[5] + "]" + sub[0] + "[/url]" + " " + u'\u2022' + " ")
 	# Return the resulting string minus the extra bullet at the end
 	return text[:-3]
 
-# Takes submissions 
+# Takes submissions and filters them by what the submitter wants drawn
 def filterBy(submissions, restric1, restric2):
 	newSubmissions = []
+	# Check all submissions and only include those that match the criteria.
 	for sub in submissions:
 		if sub[3].lower() == restric1 or sub[3].lower() == restric2:
 			newSubmissions.append(sub)
 	return newSubmissions
-
 
 # URL to search for submission posts
 url = 'http://www1.flightrising.com/forums/cc/2554259'
@@ -93,7 +97,7 @@ for page in range(1, numOfPages+1):
 	# Store submissions into the file
 	f.write(submissionInfo.encode('utf-8'))
 
-# Open file for writing to the stats
+# Open file for writing to the directory
 f = open('directory.txt', 'w+')
 
 # By Post Order
