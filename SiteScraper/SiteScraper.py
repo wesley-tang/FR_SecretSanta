@@ -2,6 +2,23 @@
 from lxml import html
 import requests
 
+# Takes a list of submissions and returns a string directory from it
+def genDirectoryText(submissions):
+	text = ""
+	for sub in submissions:
+		text += ("[url=" + sub[5] + "]" + sub[0] + "[/url]" + " " + u'\u2022' + " ")
+	# Return the resulting string minus the extra bullet at the end
+	return text[:-3]
+
+# Takes submissions 
+def filterBy(submissions, restric1, restric2):
+	newSubmissions = []
+	for sub in submissions:
+		if sub[3].lower() == restric1 or sub[3].lower() == restric2:
+			newSubmissions.append(sub)
+	return newSubmissions
+
+
 # URL to search for submission posts
 url = 'http://www1.flightrising.com/forums/cc/2554259'
 
@@ -27,9 +44,6 @@ numOfPages = 1
 if len(endPageNums) != 0:
 	numOfPages = endPageNums[0]
 
-# Open file for writing
-f = open('submissions.tsv', 'w+')
-
 # Check through every page in the thread, including the last one, since it is not 0 indexed
 for page in range(1, numOfPages+1):
 	print("Now scanning page " + str(page) + "/" + str(numOfPages))
@@ -44,8 +58,11 @@ for page in range(1, numOfPages+1):
 	if page == 1:
 		posts = posts[3:]
 
-	# This is where each submission is stored
-	submissions = []
+	# This is where each submission is stored for matching
+	submissions_match = []
+
+	# This is where all submissions are stored for stats
+	submissions_stats = []
 
 	# Loop through all submission posts
 	for post in posts:
@@ -54,18 +71,48 @@ for page in range(1, numOfPages+1):
 		for i in range(1,10,2):
 			submission.append(post.xpath(contentPath)[i].lstrip())
 		# TODO Add error trap???
+		# somestring.lower()
 
 		# Add the link to the post
 		submission.append(url + '#' + post.xpath(IDPath))
 
-		# Combine submission list into a string and add it to all submissions
+		# Add the submission to the stats array
+		submissions_stats.append(submission)
+
+		# Combine submission list into a tab separated string and add it to all submissions
 		info = '\t'.join(submission)
-		submissions.append(info)
-	
+		submissions_match.append(info)
+
+
+	# Open file for writing the matching input
+	f = open('submissions.tsv', 'w+')
+
 	# Combine all submissions into a string
-	submissionInfo = '\n'.join(submissions)
+	submissionInfo = '\n'.join(submissions_match)
 	
 	# Store submissions into the file
 	f.write(submissionInfo.encode('utf-8'))
 	
+f.close()
+
+# Open file for writing to the stats
+f = open('directory.txt', 'w+')
+
+# By Post Order
+f.write("[b]By Post Order:[/b]\n" + genDirectoryText(submissions_stats).encode('utf-8') + "\n\n")
+
+# Alphabetically
+f.write("[b]Alphabetical:[/b]\n" + genDirectoryText(sorted(submissions_stats)).encode('utf-8') + "\n\n")
+
+# Those who want dragons
+f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "dragon/feral art only", "dragon/feral art preferred")).encode('utf-8') + "\n\n")
+
+# Note, could technically reduce run time by breaking apart the array during filtering
+
+# Those who want humanoid
+f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "human art only", "human art preferred")).encode('utf-8') + "\n\n")
+
+# Those who don't care
+f.write("[b]No Preference:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "no preference", "no preference")).encode('utf-8'))
+
 f.close()
