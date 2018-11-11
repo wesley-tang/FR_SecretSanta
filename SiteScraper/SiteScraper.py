@@ -74,7 +74,7 @@ for page in range(1, numOfPages+1):
 		# somestring.lower()
 
 		# Add the link to the post
-		submission.append(url + '#' + post.xpath(IDPath))
+		submission.append(url + '/' + str(page) + '#' + post.xpath(IDPath))
 
 		# Add the submission to the stats array
 		submissions_stats.append(submission)
@@ -92,8 +92,6 @@ for page in range(1, numOfPages+1):
 	
 	# Store submissions into the file
 	f.write(submissionInfo.encode('utf-8'))
-	
-f.close()
 
 # Open file for writing to the stats
 f = open('directory.txt', 'w+')
