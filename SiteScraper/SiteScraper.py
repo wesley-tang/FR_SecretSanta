@@ -43,13 +43,20 @@ contentPath = './/div[@class=\'post-text-content\']/text()'
 # Find the element according to the path
 endPageNums = tree.xpath(pageNumPath)
 
+# This is where all submissions are stored for stats
+submissions_stats = []
+
 # Set the number of pages to look through
 numOfPages = 1
 if len(endPageNums) != 0:
 	numOfPages = endPageNums[0]
 
+
+# Open file for writing the matching input
+f = open('submissions.tsv', 'w+')
+
 # Check through every page in the thread, including the last one, since it is not 0 indexed
-for page in range(1, numOfPages+1):
+for page in range(1, int(numOfPages)+1):
 	print("Now scanning page " + str(page) + "/" + str(numOfPages))
 	# Accessing the new page by adding its number at the end of the thread's url
 	pageHTML = requests.get(url + '/' + str(page))
@@ -64,9 +71,6 @@ for page in range(1, numOfPages+1):
 
 	# This is where each submission is stored for matching
 	submissions_match = []
-
-	# This is where all submissions are stored for stats
-	submissions_stats = []
 
 	# Loop through all submission posts
 	for post in posts:
@@ -87,15 +91,13 @@ for page in range(1, numOfPages+1):
 		info = '\t'.join(submission)
 		submissions_match.append(info)
 
-
-	# Open file for writing the matching input
-	f = open('submissions.tsv', 'w+')
-
 	# Combine all submissions into a string
 	submissionInfo = '\n'.join(submissions_match)
 	
 	# Store submissions into the file
-	f.write(submissionInfo.encode('utf-8'))
+	f.write(submissionInfo.encode('utf-8') + '\n')
+
+f.close()
 
 # Open file for writing to the directory
 f = open('directory.txt', 'w+')
