@@ -69,7 +69,7 @@ def genPinglist(submissions):
 	return text
 
 # Get the string from the specified field in the given post's string
-def getValue(field, string):
+def getValue(field, string, errors):
 	# Create regex to find the field, and create match object for that entire line
 	match = re.search(field + '.*\n', string, flags=re.IGNORECASE)
 	# If match exists, return the string right after the field's text, stripped of whitespace
@@ -77,14 +77,14 @@ def getValue(field, string):
 		return string[(match.start(0)+len(field)):match.end(0)].strip()
 	else:
 		print('Error occured trying to get the value for ' + field + '!\n')
-		error_log.append("Could not get " + field + "!\n")
+		errors.append("Could not get " + field + "!\n")
 
 # Clean function for matching key words
 def matchFor(field, strList, string):
 	return re.search(field + '(.*(' +  '|'.join(strList)+').*)*\n', string, flags=re.IGNORECASE)
 
 # Figures out what preference the person wants, dragon or human
-def determinePref(field, string):
+def determinePref(field, string, errors):
 	# 0 is no pref, 1 is drag, 2 is human
 	pref = 0
 	only = True
@@ -98,14 +98,14 @@ def determinePref(field, string):
 	if dragMatch:
 		if humMatch:
 			print('Included drag and human??\n\n')
-			error_log.append("**Preferences match multiple categories**.\n")
+			errors.append("**Preferences match multiple categories**.\n")
 		else:
 			pref = 1
 	elif humMatch:
 		pref = 2
 	elif not noPrefMatch:
 		print('Can\'t figure out preference???\n\n')
-		error_log.append("**Preferences doesn't match any of the categories**.\n")
+		errors.append("**Preferences doesn't match any of the categories**.\n")
 
 	# Check if keywords for level of preference
 	prefMatch = matchFor(field, prefWords, string)
@@ -114,12 +114,12 @@ def determinePref(field, string):
 	if prefMatch:
 		if onlyMatch:
 			print('Included only and preferred??\n\n')
-			error_log.append("**Preferences match multiple levels**.\n")
+			errors.append("**Preferences match multiple levels**.\n")
 		else:
 			only = False
 	elif not onlyMatch:
 		print('Pref/only not stated???\n\n')
-		error_log.append("**Preferences doesn't match any of the levels**.\n")
+		errors.append("**Preferences doesn't match any of the levels**.\n")
 
 	# Determine preference and return the correct category
 	if pref == 0:
@@ -134,21 +134,21 @@ def determinePref(field, string):
 		return "Human Art Preferred"
 
 # Determines if they want to be backup santa or not
-def yesOrNo(string):
+def yesOrNo(string, errors):
 	yesMatch = matchFor('Would you like to sign up as a Backup Santa\\?', yesWords, string)
 	noMatch = matchFor('Would you like to sign up as a Backup Santa\\?', noWords, string)
 
 	if yesMatch:
 		if noMatch:
 			print('Included yes and no?')
-			error_log.append('**Yes and no for backup santa.**\n')
+			errors.append('**Yes and no for backup santa.**\n')
 			return "?"
 		return "Yes"
 	elif noMatch:
 		return "No"
 	else:
 		print('Didn\'t specify backup santa?')
-		error_log.append('**Unknown input for backup santa.**\n')
+		errors.append('**Unknown input for backup santa.**\n')
 		return "?"
 
 # Set the number of pages to look through
@@ -180,32 +180,34 @@ for page in range(1, int(numOfPages)+1):
 	# Loop through all submission posts
 	for post in posts:
 		submission = []
+		# For tracking any errors that might arise
+		errors = []
 
 		postContent = post.xpath(contentPath)
 		
-		error_log.append("----\n")
+		errors.append("----\n")
 
 		# Find the username
-		submission.append(getValue('Username:', postContent))
+		submission.append(getValue('Username:', postContent, errors))
 
 		# Find the id
-		submission.append(getValue('ID:', postContent))
+		submission.append(getValue('ID:', postContent, errors))
 
-		error_log.append(submission[0] + ' - ' + submission[1] + '\n')
+		errors.append(submission[0] + ' - ' + submission[1] + '\n')
 
 		# Find the draw preference
-		submission.append(determinePref('What kind of art would you prefer to -draw\\?-', postContent))
+		submission.append(determinePref('What kind of art would you prefer to -draw\\?-', postContent, errors))
 
 		# Find the receive preference
-		submission.append(determinePref('What kind of art would you prefer to -receive\\?-', postContent))
+		submission.append(determinePref('What kind of art would you prefer to -receive\\?-', postContent, errors))
 
 		# Find backup santa or no
-		submission.append(yesOrNo(postContent))
+		submission.append(yesOrNo(postContent, errors))
 
 		# Add the link to the post
 		submission.append(url + '/' + str(page) + '#' + post.xpath(IDPath))
 
-		error_log.append(submission[5] + '\n')
+		errors.append(submission[5] + '\n')
 
 		# Add the submission to the stats array
 		submissions_stats.append(submission)
@@ -213,6 +215,10 @@ for page in range(1, int(numOfPages)+1):
 		# Combine submission list into a tab separated string and add it to all submissions
 		info = '\t'.join(submission)
 		submissions_match.append(info)
+
+		# Write to error log if any errors occur.
+		if len(errors) > 3:
+			error_log.append('\n'.join(errors))
 
 	# Combine all submissions into a string
 	submissionInfo = '\n'.join(submissions_match)
