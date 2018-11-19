@@ -36,12 +36,13 @@ try:
 				pyautogui.press('enter')
 				temp = None
 				while temp == None:
-					temp = pyautogui.locateOnScreen('loaded.png', region=(240, 440, 320, 75))
+					temp = pyautogui.locateOnScreen('loaded.png')
 				time.sleep(0.4)
 
 				# Enter Subject
 				#print('Entering subject')
-				pyautogui.moveTo(365, 475)
+				pyautogui.moveTo(345, 488)
+				time.sleep(0.2)
 				pyautogui.click()
 
 				pyautogui.typewrite('FR Secret Santa Art Trade Recipient')
@@ -49,7 +50,7 @@ try:
 				# Send the message
 
 				# Constructing message
-				message = ' - PLEASE IGNORE THE FIRST PM AS IT HAD A FORMATTING ERROR -\n\nGreetings {}, thank you very much for participating in our 2017 Secret Santa Art Trade event!\n\nThis year, you have been assigned to draw art for [url={}]{}[/url]. Their art preference was [b]{}[/b], and this is the info on the characters/dragons they would like drawn:\n\n[quote]\n{}\n[/quote]\n\nIf you have any additional questions for your recipient, let us know so we can pass on your question to them while keeping your identity a secret. :)\n\nPlease remember to submit your artwork to us before [b]December the 23rd at rollover,[/b] so we can have the main post updated with all of the art by Christmas Day.\n\nAs a reminder, please let us know if you change your username at any point during this event. If something comes up and you know you won\'t be able to finish your artwork on time, please notify one of us ASAP and we will do our best to make sure that the recipient you were originally assigned to will receive artwork by Christmas.\n\nThat\'s all for now! If you have any more questions about the event in general, feel free to ask.\n\nWe look forward to seeing your artwork! :)'
+				message = 'Greetings {}, thank you very much for participating in our 2018 Secret Santa Art Trade event!\n\nThis year, you have been assigned to draw art for [url={}]{}[/url]. Their art preference was [b]{}[/b], and this is the link to their entry:\n\n[quote]\n{}\n[/quote]\n\nIf you have any additional questions for your recipient, let us know so we can pass on your question to them while keeping your identity a secret. :)\n\nPlease remember to submit your artwork to us before [b]December the 23rd at rollover,[/b] so we can have the main post updated with all of the art by Christmas Day.\n\nAs a reminder, please let us know if you change your username at any point during this event. If something comes up and you know you won\'t be able to finish your artwork on time, please notify one of us ASAP and we will do our best to make sure that the recipient you were originally assigned to will receive artwork by Christmas.\n\nThat\'s all for now! If you have any more questions about the event in general, feel free to ask.\n\nWe look forward to seeing your artwork! :)'
 				message = message.format(row[0], row[1] ,row[2], row[3], row[4]).replace("\\n", chr(10))
 				
 				messageCut = message
@@ -59,22 +60,25 @@ try:
 					message = message[1500:]
 					time.sleep(0.08)
 
-					textStart = pyautogui.locateOnScreen('start.png', region=(950, 45, 370, 200))
+					textStart = pyautogui.locateOnScreen('start.png')
 					textEnd = pyautogui.locateOnScreen('end.png', region=(930, 45, 495, 770))
-					
+
+					#print(textStart)
+					#print(textEnd)
+
 					if textStart == None or textEnd == None:
 						pyautogui.moveTo(1000, 60)
 						pyautogui.click()
 						pyautogui.typewrite('clear')
 						pyautogui.press('enter')
 
-						pyautogui.moveTo(365, 530)
+						pyautogui.moveTo(370, 580)
 						pyautogui.doubleClick()
 						pyautogui.hotkey('command', 'down')
 						time.sleep(0.05)
 						pyautogui.typewrite(messageCut)
 					else:
-						pyautogui.moveTo(textStart[0]+25, textStart[1])
+						pyautogui.moveTo(textStart[0]+29, textStart[1])
 						pyautogui.click()
 						pyautogui.dragTo(textEnd[0], textEnd[1]+10, button='left')
 						pyautogui.hotkey('command', 'c')
@@ -82,19 +86,21 @@ try:
 						pyautogui.press('enter')
 						# Enter Message body
 						#print('Entering body')
-						pyautogui.moveTo(365, 530)
+						pyautogui.moveTo(370, 580)
 						pyautogui.doubleClick()
 						pyautogui.hotkey('command', 'down')
 						time.sleep(0.05)
 						pyautogui.hotkey('command', 'v')
 				#print('Sending message')
-				pyautogui.moveTo(760, 750)
+				pyautogui.moveTo(760, 753)
 				pyautogui.click()
 				#print('waiting...')
 				#time.sleep(2.5)
 				temp = None
 				while temp == None:
-					temp = pyautogui.locateOnScreen('sent.png', region=(280, 115, 230, 170))
+					#pyautogui.moveTo(760, 753)
+					#pyautogui.click()
+					temp = pyautogui.locateOnScreen('sent.png')
 				time.sleep(0.4)
 
 
