@@ -43,14 +43,18 @@ endPageNums = tree.xpath(pageNumPath)
 # This is where all submissions are stored for stats
 submissions_stats = []
 
-# Takes a list of submissions and returns a string directory from it
+# Takes a list of submissions and returns a string directory from it, encoded
 def genDirectoryText(submissions):
 	text = ""
 	# Loop through all submissions in the list and generate the directory
 	for sub in submissions:
 		text += ("[url=" + sub[5] + "]" + sub[0] + "[/url]" + " " + u'\u2022' + " ")
 	# Return the resulting string minus the extra bullet at the end
-	return text[:-3]
+	return text[:-3].encode('utf-8')
+
+# Sorts and returns the list
+def alphabeticSort(list):
+	return sorted(list, key=lambda s: s[0].lower())
 
 # Takes submissions and filters them by what the submitter wants drawn
 def filterBy(submissions, restric1, restric2):
@@ -232,22 +236,22 @@ f.close()
 f = open('directory.txt', 'w+')
 
 # By Post Order
-f.write("[b]By Post Order:[/b]\n" + genDirectoryText(submissions_stats).encode('utf-8') + "\n\n")
+f.write("[b]By Post Order:[/b]\n" + genDirectoryText(submissions_stats) + "\n\n")
 
 # Alphabetically
-f.write("[b]Alphabetical:[/b]\n" + genDirectoryText(sorted(submissions_stats, key=lambda s: s[0].lower())).encode('utf-8') + "\n\n")
+f.write("[b]Alphabetical:[/b]\n" + genDirectoryText(alphabeticSort(submissions_stats)) + "\n\n")
 
 # Note, could technically reduce run time by breaking apart the array during filtering
 # TODO do something like this or just count to make sure the total matches the number in each category!
 
 # Those who want dragons
-f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "dragon/feral art only", "dragon/feral art preferred")).encode('utf-8') + "\n\n")
+f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "dragon/feral art only", "dragon/feral art preferred"))) + "\n\n")
 
 # Those who want humanoid
-f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "human art only", "human art preferred")).encode('utf-8') + "\n\n")
+f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "human art only", "human art preferred"))) + "\n\n")
 
 # Those who don't care
-f.write("[b]No Preference for Receiving:[/b]\n" + genDirectoryText(filterBy(submissions_stats, "no preference", "no preference")).encode('utf-8'))
+f.write("[b]No Preference for Receiving:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "no preference", "no preference"))))
 
 # Stats
 f.write('\n\nTotal Participants: [b]' + str(len(submissions_stats)) + '[/b]')
@@ -256,7 +260,7 @@ f.close()
 
 # Generating pinglist
 f = open ('pinglist.txt', 'w')
-f.write(genPinglist(sorted(submissions_stats, key=lambda s: s[0].lower())).encode('utf-8') + "\n")
+f.write(genPinglist(alphabeticSort(submissions_stats)).encode('utf-8') + "\n")
 f.close()
 
 # Generating error/exception log
