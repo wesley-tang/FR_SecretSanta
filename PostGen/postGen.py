@@ -1,4 +1,4 @@
-import csv, requests
+import csv
 
 formatString = "\n[columns]\n[url={}][img]{}[/img][/url]\n[nextcol]\n[img]https://i.imgur.com/lPELxya.png[/img]\n[nextcol]\n[center]\n\n{}\n\nFor @{}\nDrawn by {}\n[/center]\n[/columns]\n[center][img]https://s2.postimg.cc/xgqe33p0p/Divider-640.png[/img][/center]\n"
 
