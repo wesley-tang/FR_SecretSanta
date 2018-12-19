@@ -31,7 +31,7 @@ tree = html.fromstring(page.content)
 # Looks for the div where the navigable page numbers are held and finds the last one
 pageNumPath = '//div[@class=\'common-pagination-numbers\']/a[last()]/text()'
 # Path for the posts
-postPath = '//div[@class=\'post \']'
+postPath = '//div[@class=\'post \' or @class=\'post  no-signature\']'
 # Get the string value of the post's ID to get its direct link
 IDPath = 'string(./@id)'
 # Path to the content of the post, loking only at plain text
@@ -80,7 +80,7 @@ def getValue(field, string, errors):
 	if match:
 		return string[(match.start(0)+len(field)):match.end(0)].strip()
 	else:
-		print('Error occured trying to get the value for ' + field + '!\n')
+		#print('Error occured trying to get the value for ' + field + '!\n')
 		errors.append("Could not get " + field + "!\n")
 
 # Clean function for matching key words
@@ -101,14 +101,14 @@ def determinePref(field, string, errors):
 	# Determine preference based on if the matches are found
 	if dragMatch:
 		if humMatch:
-			print('Included drag and human??\n\n')
+			#print('Included drag and human??\n\n')
 			errors.append("**Preferences match multiple categories**.\n")
 		else:
 			pref = 1
 	elif humMatch:
 		pref = 2
 	elif not noPrefMatch:
-		print('Can\'t figure out preference???\n\n')
+		#print('Can\'t figure out preference???\n\n')
 		errors.append("**Preferences doesn't match any of the categories**.\n")
 
 	# Check if keywords for level of preference
@@ -117,12 +117,12 @@ def determinePref(field, string, errors):
 	
 	if prefMatch:
 		if onlyMatch:
-			print('Included only and preferred??\n\n')
+			#print('Included only and preferred??\n\n')
 			errors.append("**Preferences match multiple levels**.\n")
 		else:
 			only = False
 	elif not onlyMatch:
-		print('Pref/only not stated???\n\n')
+		#print('Pref/only not stated???\n\n')
 		errors.append("**Preferences doesn't match any of the levels**.\n")
 
 	# Determine preference and return the correct category
@@ -144,14 +144,14 @@ def yesOrNo(string, errors):
 
 	if yesMatch:
 		if noMatch:
-			print('Included yes and no?')
+			#print('Included yes and no?')
 			errors.append('**Yes and no for backup santa.**\n')
 			return "?"
 		return "Yes"
 	elif noMatch:
 		return "No"
 	else:
-		print('Didn\'t specify backup santa?')
+		#print('Didn\'t specify backup santa?')
 		errors.append('**Unknown input for backup santa.**\n')
 		return "?"
 
@@ -181,11 +181,18 @@ for page in range(1, int(numOfPages)+1):
 	# This is where each submission is stored for matching
 	submissions_match = []
 
+	# i = 0
+
 	# Loop through all submission posts
 	for post in posts:
 		submission = []
 		# For tracking any errors that might arise
 		errors = []
+
+		# i+=1
+		# if i == 7 and page == 11:
+		# 	break;
+
 
 		postContent = post.xpath(contentPath)
 		
