@@ -3,25 +3,38 @@ from lxml import html
 import requests
 import re
 
-# Note: sub[0]: name, sub[1]: id#, sub[2]: want to draw,
-# sub[3]: want to receive, sub[4]: backup santa or not, sub[5]: post link
+# Submission array indeces:
+# sub[0]: name
+# sub[1]: id#
+# sub[2]: want to draw,
+# sub[3]: want to receive
+# sub[4]: backup santa or not
+# sub[5]: post link
+# sub[6]: tier
+
+# ---- NEED TO UPDATE EVERY YEAR -----
+
+# Set the number of pages to look through
+numOfPages = 12
+# Initial posts to skip
+numInitialPosts = 5 
+# URL to search for submission posts
+url = 'https://www1.flightrising.com/forums/cc/2767227'
+
+# -------------------------------------
 
 # Key words to determine what the user wants
 yesWords = ['yes', 'yup', 'sure', 'yep', 'okay', 'ok', 'of course', 'definitely']
 noWords = ['no', 'nah', 'nope', 'not']
 
-dragonWords = ['dragon', 'feral']
-humanWords = ['human', 'anthro', 'humanoid', 'gijinka', 'gij']
-noPrefWords = ['no preference', 'no pref']
-
-prefWords = ['preferred', 'prefer']
-onlyWords = ['only']
+dragonCat = r'FR Dragons'
+humanCat = r'Human/Gijinka'
+anthroCat = r'Anthro'
+feralCat = r'Non-FR Ferals'
+noCat = r'No Preference'
 
 # Error log to track any oddities or problems
 error_log = []
-
-# URL to search for submission posts
-url = 'http://www1.flightrising.com/forums/cc/2554259'
 
 # Retrieves HTML from a given URL and stores it in an organized tree
 page = requests.get(url)
@@ -56,12 +69,13 @@ def genDirectoryText(submissions):
 def alphabeticSort(list):
 	return sorted(list, key=lambda s: s[0].lower())
 
-# Takes submissions and filters them by what the submitter wants drawn
-def filterBy(submissions, restric1, restric2):
+# Takes submissions and filters them by the index corresponding to the specified value
+def filterBy(submissions, index, restriction):
 	newSubmissions = []
-	# Check all submissions and only include those that match the criteria.
+	# Check all submissions and only include those that match
+	# either the highest preference of the receive, or the tier
 	for sub in submissions:
-		if sub[3].lower() == restric1 or sub[3].lower() == restric2:
+		if sub[index][0] == restriction:
 			newSubmissions.append(sub)
 	return newSubmissions
 
@@ -87,55 +101,66 @@ def getValue(field, string, errors):
 def matchFor(field, strList, string):
 	return re.search(field + '(.*(' +  '|'.join(strList)+').*)*\n', string, flags=re.IGNORECASE)
 
-# Figures out what preference the person wants, dragon or human
+def getRankings(field, string):
+	return re.search('(' + field + '\n*)\n*((.*\n)+?)\n*?(\s?What|\s?Please)', string, flags=re.IGNORECASE) 
+
+def findPref(category, stringToSearch):
+	return re.search(category, stringToSearch, flags=re.IGNORECASE)
+
+# Takes the question to search for amongst the given block of text
+# Returns a string of characters ordered from greatest preference to least
 def determinePref(field, string, errors):
-	# 0 is no pref, 1 is drag, 2 is human
-	pref = 0
-	only = True
+	# An array with the rank ordered
+	prefRank = []
 
-	# Check if keywords are found for each category
-	dragMatch = matchFor(field, dragonWords, string)
-	humMatch = matchFor(field, humanWords, string)
-	noPrefMatch = matchFor(field, noPrefWords, string)
+	rankings = getRankings(field, string)
 
-	# Determine preference based on if the matches are found
-	if dragMatch:
-		if humMatch:
-			#print('Included drag and human??\n\n')
-			errors.append("**Preferences match multiple categories**.\n")
+	if not rankings:
+		errors.append("Failed to find rankings")
+		return '?'
+
+	# Retrieve all lines that aren't blank
+	pattern = re.compile(r'((.+)\n)+?')
+
+	# Iterate through each non blank line to determine preference for each ranking
+	for match in re.finditer(pattern, rankings.group(2)):
+		if match.group(0) == '':
+			pass
+
+		preference = []
+
+		likesDragon = findPref(dragonCat, match.group(2))
+		likesHuman = findPref(humanCat, match.group(2))
+		likesFeral = findPref(feralCat, match.group(2))
+		likesAnthro = findPref(anthroCat, match.group(2))
+		likesNone = findPref(noCat, match.group(2))
+
+		if likesDragon:
+			preference.append('d')
+		if likesHuman:
+			preference.append('h')
+		if likesFeral:
+			preference.append('f')
+		if likesAnthro:
+			preference.append('a')
+		if likesNone:
+			preference.append('n')
+
+		if len(preference) == 0:
+			prefRank.append('?')
+			errors.append("Couldn't determine preference for %s?" % (field))
+		elif len(preference) > 1:
+			prefRank.append('?')
+			errors.append("Multiple preferences listed for %s?" % (field))
 		else:
-			pref = 1
-	elif humMatch:
-		pref = 2
-	elif not noPrefMatch:
-		#print('Can\'t figure out preference???\n\n')
-		errors.append("**Preferences doesn't match any of the categories**.\n")
+			prefRank.append(preference[0])
 
-	# Check if keywords for level of preference
-	prefMatch = matchFor(field, prefWords, string)
-	onlyMatch = matchFor(field, onlyWords, string)
-	
-	if prefMatch:
-		if onlyMatch:
-			#print('Included only and preferred??\n\n')
-			errors.append("**Preferences match multiple levels**.\n")
-		else:
-			only = False
-	elif not onlyMatch:
-		#print('Pref/only not stated???\n\n')
-		errors.append("**Preferences doesn't match any of the levels**.\n")
+	if len(prefRank) > 4:
+		errors.append("Ranked more than 4 items for %s?\nErr: %d\n" % (field, len(prefRank)))
+	elif len(prefRank) < 4:
+		errors.append("Ranked fewer than 4 items for %s?\nErr: %d\n" % (field, len(prefRank)))
 
-	# Determine preference and return the correct category
-	if pref == 0:
-		return "No Preference"
-	elif pref == 1:
-		if only:
-			return "Dragon/Feral Art Only"
-		return "Dragon/Feral Art Preferred"
-	else:
-		if only:
-			return "Human Art Only"
-		return "Human Art Preferred"
+	return ''.join(prefRank)
 
 # Determines if they want to be backup santa or not
 def yesOrNo(string, errors):
@@ -155,14 +180,12 @@ def yesOrNo(string, errors):
 		errors.append('**Unknown input for backup santa.**\n')
 		return "?"
 
-# Set the number of pages to look through
-numOfPages = 1
 if len(endPageNums) != 0:
 	numOfPages = endPageNums[0]
 
-
-# Open file for writing the matching input
-f = open('submissions.tsv', 'w+')
+# Open files for writing the matching input
+fileTierA = open('signups_tierA.tsv', 'w+')
+fileTierB = open('signups_tierB.tsv', 'w+')
 
 # Check through every page in the thread, including the last one, since it is not 0 indexed
 for page in range(1, int(numOfPages)+1):
@@ -174,25 +197,19 @@ for page in range(1, int(numOfPages)+1):
 	# Get all posts
 	posts = tree.xpath(postPath)
 
-	# Remove the first three non-submission posts, if on the first page
+	# Skip non-user posts
 	if page == 1:
-		posts = posts[3:]
+		posts = posts[numInitialPosts:]
 
 	# This is where each submission is stored for matching
-	submissions_match = []
-
-	# i = 0
+	signupsTierA = []
+	signupsTierB = []
 
 	# Loop through all submission posts
 	for post in posts:
 		submission = []
 		# For tracking any errors that might arise
 		errors = []
-
-		# i+=1
-		# if i == 7 and page == 11:
-		# 	break;
-
 
 		postContent = post.xpath(contentPath)
 		
@@ -207,10 +224,10 @@ for page in range(1, int(numOfPages)+1):
 		errors.append(submission[0] + ' - ' + submission[1] + '\n')
 
 		# Find the draw preference
-		submission.append(determinePref('What kind of art would you prefer to -draw\\?-', postContent, errors))
+		submission.append(determinePref('Please rank your -drawing- preferences:', postContent, errors))
 
 		# Find the receive preference
-		submission.append(determinePref('What kind of art would you prefer to -receive\\?-', postContent, errors))
+		submission.append(determinePref('Please rank your -receiving- preferences:', postContent, errors))
 
 		# Find backup santa or no
 		submission.append(yesOrNo(postContent, errors))
@@ -218,27 +235,43 @@ for page in range(1, int(numOfPages)+1):
 		# Add the link to the post
 		submission.append(url + '/' + str(page) + '#' + post.xpath(IDPath))
 
-		errors.append(submission[5] + '\n')
+		# Find the tier
+		submission.append(getValue('What tier would you like to be in?', postContent, errors))
 
 		# Add the submission to the stats array
 		submissions_stats.append(submission)
 
-		# Combine submission list into a tab separated string and add it to all submissions
-		info = '\t'.join(submission)
-		submissions_match.append(info)
+		# Combine submission list, minus the tier, into a tab separated string and add it to the appropriate tier list
+		info = '\t'.join(submission[:-1])
+
+		if submission[6] == 'A':
+			signupsTierA.append(info)
+		elif submission[6] == 'B':
+			signupsTierB.append(info)
+		else:
+			errors.append("Could not determine Tier (default to B)")
+			signupsTierB.append(info)
+
+		errors.append(submission[5] + '\n')
 
 		# Write to error log if any errors occur.
 		if len(errors) > 3:
 			error_log.append('\n'.join(errors))
 
 	# Combine all submissions into a string
-	submissionInfo = '\n'.join(submissions_match)
+	submissionsTierA = '\n'.join(signupsTierA)
+	submissionsTierB = '\n'.join(signupsTierB)
 	
 	# Store submissions into the file
-	f.write(submissionInfo.encode('utf-8') + '\n')
+	fileTierA.write(submissionsTierA.encode('utf-8') + '\n')
+	fileTierB.write(submissionsTierB.encode('utf-8') + '\n')
 
-f.close()
+fileTierA.close()
+fileTierB.close()
+print("Wrote signups successfully")
 
+
+print("Writing directory to file")
 # Open file for writing to the directory
 f = open('directory.txt', 'w+')
 
@@ -251,27 +284,39 @@ f.write("[b]Alphabetical:[/b]\n" + genDirectoryText(alphabeticSort(submissions_s
 # Note, could technically reduce run time by breaking apart the array during filtering
 # TODO do something like this or just count to make sure the total matches the number in each category!
 
-# Those who want dragons
-f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "dragon/feral art only", "dragon/feral art preferred"))) + "\n\n")
+f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'd'))) + "\n\n")
 
-# Those who want humanoid
-f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "human art only", "human art preferred"))) + "\n\n")
+f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'h'))) + "\n\n")
 
-# Those who don't care
-f.write("[b]No Preference for Receiving:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, "no preference", "no preference"))))
+f.write("[b]Want Anthro Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'a'))) + "\n\n")
+
+f.write("[b]Want Feral Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'f'))) + "\n\n")
+
+f.write("[b]No Preference:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'n'))) + "\n\n")
+
+f.write("[b]Tier A:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 6, 'A'))) + "\n\n")
+
+f.write("[b]Tier B:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 6, 'B'))) + "\n\n")
 
 # Stats
 f.write('\n\nTotal Participants: [b]' + str(len(submissions_stats)) + '[/b]')
 
 f.close()
+print("Wrote directory successfully")
 
+print("Writing pinglist to file")
 # Generating pinglist
 f = open ('pinglist.txt', 'w')
 f.write(genPinglist(alphabeticSort(submissions_stats)).encode('utf-8') + "\n")
 f.close()
+print("wrote pinglist successfully")
 
+print("Writing error log to file")
 # Generating error/exception log
 error_log = ''.join(error_log) 
 f = open('error_log.txt', 'w')
-f.write(error_log)
+f.write(error_log.encode('utf-8'))
 f.close()
+print("Wrote error log successfully")
+
+print("DONE")
