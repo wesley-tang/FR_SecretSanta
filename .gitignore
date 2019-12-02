@@ -1,5 +1,10 @@
 submissions.tsv
 directory.txt
 pinglist.txt
-error_log.txt]
+error_log.txt
 matchups.tsv
+SiteScraper/2019
+Matcher/matchup_STATS.txt
+secrets.py
+2019Matching/
+secrets.pyc

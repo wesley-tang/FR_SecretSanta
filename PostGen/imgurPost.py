@@ -50,17 +50,12 @@ def uploadImages(arts, album, fileName):
 
 				newArts = arts[onIndex:len(arts)]
 
-				# To track index
-				i = 0
 				# Open file for writing new file
-				f = open(fileName, 'w+')
+				entries = []
+				f = open(fileName, 'w')
 				for newArt in newArts:
-					f.write(newArt[0] + "\t" + newArt[1] + "\t" + newArt[2] + "\t" + newArt[3] + "\t" + newArt[4])
-					
-					# Don't add a newline if you're at the end of the submissions
-					i += 1
-					if i != len(newArt):
-						f.write("\n")
+					entries.append(newArt[0] + "\t" + newArt[1] + "\t" + newArt[2] + "\t" + newArt[3] + "\t" + newArt[4])
+				f.write('\n'.join(entries))
 				f.close()
 
 				print("Submissions have been updated.")
@@ -70,8 +65,8 @@ def uploadImages(arts, album, fileName):
 				print("\nOther error occured!!!")
 				print("\t > " + response.text + "\n")
 		else:
-			onIndex += 1
-			print("Done " + art[0] + "'s!" + " (" + str(onIndex) + ")\n")
+			print("Done " + art[0] + "'s!" + " (" + str(onIndex+1) + "/" + str(len(arts)) + ")\n")
+		onIndex += 1
 	return True
 
 #Try opening edited tsv
@@ -82,8 +77,10 @@ try:
 
 		# 0:artist, 1:recip, 2:link to art 3:message, 4:thumbnail
 		for row in tsvin:
+			if row[0] == "done":
+				print("Feral art is already done.")
+				break
 			feralArts.append([row[0], row[1], row[2], row[3], row[4]])
-
 
 	with open('humanArt.tsv', 'r') as tsvin:
 		tsvin = csv.reader(tsvin, delimiter='\t')
@@ -122,6 +119,9 @@ print("\n~~~~~~~~~~~~~~~\nPosting feral art to imgur...\n ~~~~~~~~~~~~~~~")
 
 if uploadImages(feralArts, feralAlbum, "feralArt.tsv"):
 	print("Completed feral art!\n")
+	f = open("feralArt.tsv", 'w+')
+	f.write("done")
+	f.close()
 else:
 	print("Not completed feral art!\n")
 
@@ -131,3 +131,4 @@ if uploadImages(humanArts, humanAlbum, "humanArt.tsv"):
 	print("Completed human art!")
 else:
 	print("Not completed human art!")
+	
