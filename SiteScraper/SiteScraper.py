@@ -15,11 +15,11 @@ import re
 # ---- NEED TO UPDATE EVERY YEAR -----
 
 # Set the number of pages to look through
-numOfPages = 12
+numOfPages = 1
 # Initial posts to skip
-numInitialPosts = 5 
+numInitialPosts = 2
 # URL to search for submission posts
-url = 'https://www1.flightrising.com/forums/cc/2767227'
+url = 'https://www1.flightrising.com/forums/cc/2928940'
 
 # -------------------------------------
 
