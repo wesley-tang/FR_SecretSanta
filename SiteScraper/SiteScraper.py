@@ -12,26 +12,31 @@ import re
 # sub[5]: post link
 # sub[6]: tier
 
+USERNAME = 0
+USERID = 1
+PREFER = 2
+WILLING = 3
+BANNED = 4
+LINK = 5
+SUBJECT_DRAG = 6
+SUBJECT_HUMAN = 7
+SUBJECT_ANTHRO = 8
+SUBJECT_FERAL = 9
+BACKUP = 10
+TIER = 11
+
 # ---- NEED TO UPDATE EVERY YEAR -----
 
 # Set the number of pages to look through
-numOfPages = 12
+numOfPages = 1
 # Initial posts to skip
-numInitialPosts = 5 
+numInitialPosts = 2
 # URL to search for submission posts
-url = 'https://www1.flightrising.com/forums/cc/2767227'
+url = 'https://www1.flightrising.com/forums/cc/3079245'
 
 # -------------------------------------
 
-# Key words to determine what the user wants
-yesWords = ['yes', 'yup', 'sure', 'yep', 'okay', 'ok', 'of course', 'definitely']
-noWords = ['no', 'nah', 'nope', 'not']
-
-dragonCat = r'FR Dragons'
-humanCat = r'Human/Gijinka'
-anthroCat = r'Anthro'
-feralCat = r'Non-FR Ferals'
-noCat = r'No Preference'
+subjectName = "Subject Name:"
 
 # Error log to track any oddities or problems
 error_log = []
@@ -42,26 +47,33 @@ tree = html.fromstring(page.content)
 
 # The path to find the max number of pages in the thread
 # Looks for the div where the navigable page numbers are held and finds the last one
-pageNumPath = '//div[@class=\'common-pagination-numbers\']/a[last()]/text()'
+pageNumPath = 'string(//div[@class=\'common-pagination-pages\']/a[last()])'
 # Path for the posts
-postPath = '//div[@class=\'post \' or @class=\'post  no-signature\']'
+postPath = '//div[@class=\'post  \' or @class=\'post   no-signature \']'
 # Get the string value of the post's ID to get its direct link
 IDPath = 'string(./@id)'
-# Path to the content of the post, loking only at plain text
+# Path to the content of the post, looking only at plain text
 contentPath = 'string(.//div[@class=\'post-text-content\'])'
+# Path to the author
+authorPathUrl = 'string(.//a[@class=\'post-author-username\']/@href)'
+authorPathName = 'string(.//a[@class=\'post-author-username\'])'
 
-# Find the element according to the path
-endPageNums = tree.xpath(pageNumPath)
+userIdRegex = 'https:\/\/www1\.flightrising\.com\/clan-profile\/(\d+)'
+codeRegex = '~\/(?:p(\d+))?(?:w(\d+))?(?:b(\d+))?S(.*)St(\d)s(\d)\/~'
+subjectRegex = '(?:n|r(\d))T(\d+)'
+
+
 
 # This is where all submissions are stored for stats
 submissions_stats = []
+subjects_stats = []
 
 # Takes a list of submissions and returns a string directory from it, encoded
 def genDirectoryText(submissions):
 	text = ""
 	# Loop through all submissions in the list and generate the directory
 	for sub in submissions:
-		text += ("[url=" + sub[5] + "]" + sub[0] + "[/url]" + " " + u'\u2022' + " ")
+		text += ("[url=" + sub[LINK] + "]" + sub[USERNAME] + "[/url]" + " " + u'\u2022' + " ")
 	# Return the resulting string minus the extra bullet at the end
 	return text[:-3].encode('utf-8')
 
@@ -70,14 +82,22 @@ def alphabeticSort(list):
 	return sorted(list, key=lambda s: s[0].lower())
 
 # Takes submissions and filters them by the index corresponding to the specified value
-def filterBy(submissions, index, restriction):
-	newSubmissions = []
+def filterBy(subjects, restriction):
+	newSubjects = []
 	# Check all submissions and only include those that match
 	# either the highest preference of the receive, or the tier
-	for sub in submissions:
-		if sub[index][0] == restriction:
-			newSubmissions.append(sub)
-	return newSubmissions
+	for sub in subjects:
+		if restriction in sub[1]:
+			newSubjects.append(sub)
+	return newSubjects
+
+def genSubjectDirectory(subjects):
+	text = ""
+	for sub in subjects:
+		text += ("[url=" + sub[2] + "]" + sub[0] + "[/url]" + " " + u'\u2022' + " ")
+	# Return the resulting string minus the extra bullet at the end
+	return text[:-3].encode('utf-8')
+
 
 # Takes list of submissions and creates the pinglist for it
 def genPinglist(submissions):
@@ -86,100 +106,31 @@ def genPinglist(submissions):
 		text += "@" + sub[0] + " "
 	return text
 
-# Get the string from the specified field in the given post's string
-def getValue(field, string, errors):
-	# Create regex to find the field, and create match object for that entire line
-	match = re.search(field + '.*\n', string, flags=re.IGNORECASE)
-	# If match exists, return the string right after the field's text, stripped of whitespace
-	if match:
-		return string[(match.start(0)+len(field)):match.end(0)].strip()
-	else:
-		#print('Error occured trying to get the value for ' + field + '!\n')
-		errors.append("Could not get " + field + "!\n")
+def getSubjects(subjectCode, subjectNames, subjects, submission):
+	subjectVal = [0.0, 0.0, 0.0, 0.0]
 
-# Clean function for matching key words
-def matchFor(field, strList, string):
-	return re.search(field + '(.*(' +  '|'.join(strList)+').*)*\n', string, flags=re.IGNORECASE)
+	rankedPoints = [18, 9, 4, 2, 1]
 
-def getRankings(field, string):
-	return re.search('(' + field + '\n*)\n*((.*\n)+?)\n*?(\s?What|\s?Please)', string, flags=re.IGNORECASE) 
+	
+	subjectMatches = re.findall('(?:n|r(\d))T(\d+)', subjectCode)
+	for subject, subjectName in zip(subjectMatches, subjectNames):
 
-def findPref(category, stringToSearch):
-	return re.search(category, stringToSearch, flags=re.IGNORECASE)
+		subjects.append((subjectName, subject[1], submission[LINK]))
 
-# Takes the question to search for amongst the given block of text
-# Returns a string of characters ordered from greatest preference to least
-def determinePref(field, string, errors):
-	# An array with the rank ordered
-	prefRank = []
+		for tag in str(subject[1]):
+			if subject[0]:
+				subjectVal[int(tag)-1] += rankedPoints[int(subject[0])]
+			else:
+				subjectVal[int(tag)-1] += 6.8
+			
+	for val in subjectVal:
+		submission.append(str(val))
 
-	rankings = getRankings(field, string)
 
-	if not rankings:
-		errors.append("Failed to find rankings")
-		return '?'
 
-	# Retrieve all lines that aren't blank
-	pattern = re.compile(r'((.+)\n)+?')
 
-	# Iterate through each non blank line to determine preference for each ranking
-	for match in re.finditer(pattern, rankings.group(2)):
-		if match.group(0) == '':
-			pass
-
-		preference = []
-
-		likesDragon = findPref(dragonCat, match.group(2))
-		likesHuman = findPref(humanCat, match.group(2))
-		likesFeral = findPref(feralCat, match.group(2))
-		likesAnthro = findPref(anthroCat, match.group(2))
-		likesNone = findPref(noCat, match.group(2))
-
-		if likesDragon:
-			preference.append('d')
-		if likesHuman:
-			preference.append('h')
-		if likesFeral:
-			preference.append('f')
-		if likesAnthro:
-			preference.append('a')
-		if likesNone:
-			preference.append('n')
-
-		if len(preference) == 0:
-			prefRank.append('?')
-			errors.append("Couldn't determine preference for %s?" % (field))
-		elif len(preference) > 1:
-			prefRank.append('?')
-			errors.append("Multiple preferences listed for %s?" % (field))
-		else:
-			prefRank.append(preference[0])
-
-	if len(prefRank) > 4:
-		errors.append("Ranked more than 4 items for %s?\nErr: %d\n" % (field, len(prefRank)))
-	elif len(prefRank) < 4:
-		errors.append("Ranked fewer than 4 items for %s?\nErr: %d\n" % (field, len(prefRank)))
-
-	return ''.join(prefRank)
-
-# Determines if they want to be backup santa or not
-def yesOrNo(string, errors):
-	yesMatch = matchFor('Would you like to sign up as a Backup Santa\\?', yesWords, string)
-	noMatch = matchFor('Would you like to sign up as a Backup Santa\\?', noWords, string)
-
-	if yesMatch:
-		if noMatch:
-			#print('Included yes and no?')
-			errors.append('**Yes and no for backup santa.**\n')
-			return "?"
-		return "Yes"
-	elif noMatch:
-		return "No"
-	else:
-		#print('Didn\'t specify backup santa?')
-		errors.append('**Unknown input for backup santa.**\n')
-		return "?"
-
+# Find the el\ement according to the path
+endPageNums = tree.xpath(pageNumPath)
 if len(endPageNums) != 0:
 	numOfPages = endPageNums[0]
 
@@ -205,58 +156,72 @@ for page in range(1, int(numOfPages)+1):
 	signupsTierA = []
 	signupsTierB = []
 
-	# Loop through all submission posts
 	for post in posts:
+		# 0 - username
+		# 1 - user id
+		# 2 - prefer drawing
+		# 3 - willing to draw
+		# 4 - will not draw
+		# 5 - subject fr drag val
+		# 6 - subject fr human val
+		# 7 - subject fr anthro val
+		# 8 - subject fr feral val
+		# 9 - backup santa
+		# 10 - link to post
+		# 11  - tier (1 = A, 0 = B)
 		submission = []
-		# For tracking any errors that might arise
-		errors = []
-
-		postContent = post.xpath(contentPath)
-		
+		subjects = []
+		errors = []		
 		errors.append("----\n")
 
-		# Find the username
-		submission.append(getValue('Username:', postContent, errors))
 
-		# Find the id
-		submission.append(getValue('ID:', postContent, errors))
+		userId = re.search(userIdRegex, post.xpath(authorPathUrl)).group(1)
+		username = post.xpath(authorPathName)
 
-		errors.append(submission[0] + ' - ' + submission[1] + '\n')
 
-		# Find the draw preference
-		submission.append(determinePref('Please rank your -drawing- preferences:', postContent, errors))
+		submission.append(username)
+		submission.append(userId)
 
-		# Find the receive preference
-		submission.append(determinePref('Please rank your -receiving- preferences:', postContent, errors))
 
-		# Find backup santa or no
-		submission.append(yesOrNo(postContent, errors))
+		postContent = post.xpath(contentPath)
+		codeMatch = re.search(codeRegex, postContent)
+
+
+		# Draw prefs
+		submission.append(str(codeMatch.group(1) if codeMatch.group(1) else "none" ))
+		submission.append(str(codeMatch.group(2) if codeMatch.group(2) else "none" ))
+		submission.append(str(codeMatch.group(3) if codeMatch.group(3) else "none" ))
+
 
 		# Add the link to the post
 		submission.append(url + '/' + str(page) + '#' + post.xpath(IDPath))
 
-		# Find the tier
-		submission.append(getValue('What tier would you like to be in?', postContent, errors))
+		# Subjects
+		subjectsCode = codeMatch.group(4)
+		subjectNames = re.findall('Subject Name: *(\S*)', postContent)
+		getSubjects(subjectsCode, subjectNames, subjects, submission)
 
-		# Add the submission to the stats array
+		submission.append(codeMatch.group(6)) #out of order to put tier last
+
+		# TIER
+		submission.append(codeMatch.group(5))
+
+
 		submissions_stats.append(submission)
+		subjects_stats += subjects
 
-		# Combine submission list, minus the tier, into a tab separated string and add it to the appropriate tier list
+
 		info = '\t'.join(submission[:-1])
+		# print(info)
 
-		if submission[6] == 'A':
+		if submission[TIER] == '1':
 			signupsTierA.append(info)
-		elif submission[6] == 'B':
+		elif submission[TIER] == '0':
 			signupsTierB.append(info)
 		else:
 			errors.append("Could not determine Tier (default to B)")
 			signupsTierB.append(info)
 
-		errors.append(submission[5] + '\n')
-
-		# Write to error log if any errors occur.
-		if len(errors) > 3:
-			error_log.append('\n'.join(errors))
 
 	# Combine all submissions into a string
 	submissionsTierA = '\n'.join(signupsTierA)
@@ -275,31 +240,28 @@ print("Writing directory to file")
 # Open file for writing to the directory
 f = open('directory.txt', 'w+')
 
-# By Post Order
+
+f.write('[b][size=4]PARTICIPANTS:[/size][/b]\n\n')
+
 f.write("[b]By Post Order:[/b]\n" + genDirectoryText(submissions_stats) + "\n\n")
 
-# Alphabetically
 f.write("[b]Alphabetical:[/b]\n" + genDirectoryText(alphabeticSort(submissions_stats)) + "\n\n")
 
-# Note, could technically reduce run time by breaking apart the array during filtering
-# TODO do something like this or just count to make sure the total matches the number in each category!
+f.write('Total Participants: [b]' + str(len(submissions_stats)) + '[/b]\n\n')
 
-f.write("[b]Want Dragon Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'd'))) + "\n\n")
 
-f.write("[b]Want Human Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'h'))) + "\n\n")
+f.write('\n[b][size=4]SUBJECTS:[/size][/b]\n\n')
 
-f.write("[b]Want Anthro Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'a'))) + "\n\n")
+f.write("[b]Dragon Subjects:[/b]\n" + genSubjectDirectory(alphabeticSort(filterBy(subjects_stats, '1'))) + "\n\n")
 
-f.write("[b]Want Feral Art:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'f'))) + "\n\n")
+f.write("[b]Humanoid Subjects:[/b]\n" + genSubjectDirectory(alphabeticSort(filterBy(subjects_stats, '2'))) + "\n\n")
 
-f.write("[b]No Preference:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 3, 'n'))) + "\n\n")
+f.write("[b]Anthropomorphic Subjects:[/b]\n" + genSubjectDirectory(alphabeticSort(filterBy(subjects_stats, '3'))) + "\n\n")
 
-f.write("[b]Tier A:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 6, 'A'))) + "\n\n")
-
-f.write("[b]Tier B:[/b]\n" + genDirectoryText(alphabeticSort(filterBy(submissions_stats, 6, 'B'))) + "\n\n")
+f.write("[b]Feral Subjects:[/b]\n" + genSubjectDirectory(alphabeticSort(filterBy(subjects_stats, '4'))) + "\n\n")
 
 # Stats
-f.write('\n\nTotal Participants: [b]' + str(len(submissions_stats)) + '[/b]')
+f.write('\nTotal Subjects: [b]' + str(len(subjects_stats)) + '[/b]')
 
 f.close()
 print("Wrote directory successfully")
