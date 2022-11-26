@@ -32,7 +32,7 @@ numOfPages = 1
 # Initial posts to skip
 numInitialPosts = 2
 # URL to search for submission posts
-url = 'https://www1.flightrising.com/forums/cc/3079245'
+url = 'https://www1.flightrising.com/forums/cc/3183234'
 
 # -------------------------------------
 
@@ -122,17 +122,24 @@ def getSubjects(subjectCode, subjectNames, subjects, submission):
 				subjectVal[int(tag)-1] += rankedPoints[int(subject[0])]
 			else:
 				subjectVal[int(tag)-1] += 6.8
+
+	if not subject[0]:
+		subjectVal = normalizeNoRankScores(subjectVal)
 			
 	for val in subjectVal:
 		submission.append(str(val))
 
+def normalizeNoRankScores(vals):
+	increment = 34 - max(vals)
+	vals = [val + increment for val in vals]
+	return vals
 
 
 
-# Find the el\ement according to the path
+# Find the element according to the path
 endPageNums = tree.xpath(pageNumPath)
 if len(endPageNums) != 0:
-	numOfPages = endPageNums[0]
+	numOfPages = endPageNums
 
 # Open files for writing the matching input
 fileTierA = open('signups_tierA.tsv', 'w+')
